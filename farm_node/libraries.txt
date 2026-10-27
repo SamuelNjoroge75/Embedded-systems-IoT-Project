@@ -1,0 +1,5 @@
+# Paste into Wokwi's libraries.txt tab
+DHT sensor library
+Adafruit Unified Sensor
+PubSubClient
+ArduinoJson

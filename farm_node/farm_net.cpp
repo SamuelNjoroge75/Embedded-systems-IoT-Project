@@ -39,7 +39,7 @@ static bool mqttConnect() {
   if (mqtt.connected()) return true;
   mqtt.setServer(MQTT_HOST, MQTT_PORT);
   mqtt.setBufferSize(512);
-  return mqtt.connect(DEVICE_ID);
+  return mqtt.connect(MQTT_CLIENT_ID);
 }
 
 bool mqttPublishData(const char* payload) {

@@ -1,4 +1,4 @@
-# Cloud & Dashboard (Group 4D)
+# Cloud & Dashboard
 
 MQTT subscriber + SQLite database + web dashboard for the Busia farm node.
 

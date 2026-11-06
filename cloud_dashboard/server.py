@@ -1,5 +1,5 @@
 """
-Group 4D - Cloud & Dashboard
+Cloud & Dashboard
 Subscribes to the farm node's MQTT topic, stores every reading in SQLite,
 and serves the dashboard + a small JSON/CSV API.
 

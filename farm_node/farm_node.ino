@@ -66,7 +66,7 @@ static void goToSleep() {
 void setup() {
   Serial.begin(115200);
   delay(500);
-  Serial.println("\nFarm node starting");
+  Serial.println("\nFarm node starting...");
 
   sensorsBegin();
   if (CALIBRATION_MODE) return;

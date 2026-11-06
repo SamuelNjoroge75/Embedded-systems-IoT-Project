@@ -3,7 +3,7 @@
 #include "config.h"
 #include "sensors.h"
 
-static DHT dht(PIN_DHT, DHT22);
+static DHT dht(PIN_DHT, DHT11);
 
 void sensorsBegin() {
   dht.begin();

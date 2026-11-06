@@ -4,9 +4,9 @@
 #include "secrets.h"          // WIFI_SSID, WIFI_PASS (are not committed to GitHub)
 
 // ---------- Identity and MQTT ----------
-#define DEVICE_ID     "g4d-farm-node-01"
-#define TOPIC_DATA    "strathmore/4d/busia/" DEVICE_ID "/data"
-#define MQTT_HOST     "broker.hivemq.com"
+#define NODE_ID     "farm_node_1"                    //name shown on the dashboard
+#define TOPIC_DATA    "strathmore/group3B/" NODE_ID  //login name on the broker, must be unique
+#define MQTT_CLIENT_ID  "g3b-esp32-node-o1"
 constexpr uint16_t MQTT_PORT = 1883;
 
 // ---------- Pins ----------
@@ -20,7 +20,7 @@ constexpr int SOIL_WET_RAW = 1400;   // sensor in saturated soil
 constexpr int SOIL_SAMPLES = 10;     // readings averaged per measurement
 
 // ---------- Behaviour ----------
-constexpr uint32_t CYCLE_SECONDS    = 60;      // time between measurements
+constexpr uint32_t CYCLE_SECONDS    = 120;      // one reading every 2 minutes
 constexpr bool     USE_DEEP_SLEEP   = false;   // true for battery/solar later
 constexpr bool     CALIBRATION_MODE = false;   // true to print raw soil values
 constexpr uint32_t WIFI_TIMEOUT_MS  = 10000;

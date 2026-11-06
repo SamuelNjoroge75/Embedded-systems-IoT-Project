@@ -15,7 +15,7 @@ from flask import Flask, Response, jsonify, request, send_from_directory
 # ---- Settings (override with environment variables) -------------------------
 MQTT_HOST = os.getenv("MQTT_HOST", "broker.hivemq.com")
 MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
-MQTT_TOPIC = os.getenv("MQTT_TOPIC", "strathmore/group4d/#")   # must match the firmware
+MQTT_TOPIC = os.getenv("MQTT_TOPIC", "strathmore/farm/#")   # must match the firmware
 MQTT_USER = os.getenv("MQTT_USER", "")
 MQTT_PASS = os.getenv("MQTT_PASS", "")
 SOIL_MIN = float(os.getenv("SOIL_MIN", "30"))     # % below which we raise "soil too dry"

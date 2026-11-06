@@ -11,7 +11,7 @@ import paho.mqtt.client as mqtt
 
 HOST = os.getenv("MQTT_HOST", "broker.hivemq.com")
 PORT = int(os.getenv("MQTT_PORT", "1883"))
-TOPIC = os.getenv("SIM_TOPIC", "strathmore/group4d/farm_node_1")
+TOPIC = os.getenv("SIM_TOPIC", "strathmore/farm/farm_node_1")
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--interval", type=float, default=2.0)

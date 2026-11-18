@@ -6,7 +6,7 @@ and serves the dashboard + a small JSON/CSV API.
 Run:  python server.py
 Open: http://localhost:5000
 """
-import csv, io, json, os, sqlite3, threading, time
+import csv, io, json, math, os, sqlite3, threading, time
 from datetime import datetime, timezone
 
 import paho.mqtt.client as mqtt
@@ -21,6 +21,7 @@ MQTT_PASS = os.getenv("MQTT_PASS", "")
 SOIL_MIN = float(os.getenv("SOIL_MIN", "30"))     # % below which we raise "soil too dry"
 OFFLINE_AFTER = int(os.getenv("OFFLINE_AFTER", "120"))  # seconds without data = offline
 DB_PATH = os.getenv("DB_PATH", "farm.db")
+MERGE_WINDOW = int(os.getenv("MERGE_WINDOW", "600"))  # seconds: readings this close together count as "current"
 # -----------------------------------------------------------------------------
 
 app = Flask(__name__, static_folder="static")
@@ -46,20 +47,44 @@ def on_connect(client, userdata, flags, reason_code, properties=None):
     client.subscribe(MQTT_TOPIC)
 
 
+def to_num(v):
+    """Number (or numeric string like "24.0") -> float/int, anything else -> None."""
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, str):
+        try:
+            v = float(v)
+        except ValueError:
+            return None
+    if isinstance(v, (int, float)) and math.isfinite(v):
+        return v
+    return None
+
+
 def store_message(topic, payload_bytes):
-    """Accepts any flat JSON object; keeps numeric fields only."""
+    """Accepts a JSON object with numeric fields, OR a plain number on a per-sensor
+    topic such as strathmore/group3b/farm_node_1/temperature."""
     try:
-        obj = json.loads(payload_bytes.decode("utf-8"))
-    except (ValueError, UnicodeDecodeError):
-        print(f"[mqtt] ignored non-JSON on {topic}")
+        text = payload_bytes.decode("utf-8").strip()
+    except UnicodeDecodeError:
         return False
-    if not isinstance(obj, dict):
-        return False
-    data = {k: v for k, v in obj.items()
-            if isinstance(v, (int, float)) and not isinstance(v, bool)}
-    node = str(obj.get("node_id") or obj.get("node") or obj.get("device")
-               or topic.rstrip("/").split("/")[-1])
-    data.pop("ts", None)
+    parts = topic.rstrip("/").split("/")
+    try:
+        obj = json.loads(text)
+    except ValueError:
+        obj = to_num(text)
+        if obj is None:
+            print(f"[mqtt] ignored unreadable payload on {topic}")
+            return False
+    if isinstance(obj, dict):
+        data = {k: n for k, v in obj.items() if k != "ts" and (n := to_num(v)) is not None}
+        node = str(obj.get("node_id") or obj.get("node") or obj.get("device") or parts[-1])
+    else:
+        n = to_num(obj)
+        if n is None or len(parts) < 2:
+            return False
+        data = {parts[-1]: n}
+        node = parts[-2]
     if not data:
         return False
     with db() as con:
@@ -84,19 +109,29 @@ def start_mqtt():
 
 
 # ---- Helpers ----------------------------------------------------------------
-def soil_key(data):
-    for k in data:
-        if "soil" in k.lower() or "moist" in k.lower():
-            return k
-    return None
+def is_soil(key):
+    k = key.lower()
+    return ("soil" in k or "moist" in k) and "temp" not in k
 
 
 def alerts_for(data):
-    out = []
-    k = soil_key(data)
-    if k is not None and data[k] < SOIL_MIN:
-        out.append({"type": "soil_dry", "message": f"Soil too dry ({data[k]:.1f}% < {SOIL_MIN:g}%)"})
-    return out
+    return [{"type": "soil_dry",
+             "message": f"Soil too dry - {k.replace('_', ' ')} {v:.1f}% (limit {SOIL_MIN:g}%)"}
+            for k, v in data.items() if is_soil(k) and v < SOIL_MIN]
+
+
+def merged_latest(con, node):
+    """Newest value of EVERY field for a node, even if the fields arrive in separate messages."""
+    rows = con.execute("SELECT ts,data FROM readings WHERE node=? ORDER BY id DESC LIMIT 500", (node,))
+    newest, merged = None, {}
+    for r in rows:
+        if newest is None:
+            newest = r["ts"]
+        if newest - r["ts"] > MERGE_WINDOW:
+            break
+        for k, v in json.loads(r["data"]).items():
+            merged.setdefault(k, v)
+    return newest, merged
 
 
 # ---- API --------------------------------------------------------------------
@@ -112,10 +147,9 @@ def latest():
     with db() as con:
         nodes = [r["node"] for r in con.execute("SELECT DISTINCT node FROM readings")]
         for n in nodes:
-            r = con.execute("SELECT ts,data FROM readings WHERE node=? ORDER BY id DESC LIMIT 1", (n,)).fetchone()
-            data = json.loads(r["data"])
-            result[n] = {"ts": r["ts"], "online": now - r["ts"] <= OFFLINE_AFTER,
-                         "data": data, "alerts": alerts_for(data)}
+            ts, data = merged_latest(con, n)
+            result[n] = {"ts": ts, "online": now - ts <= OFFLINE_AFTER,
+                         "data": dict(sorted(data.items())), "alerts": alerts_for(data)}
     return jsonify({"soil_min": SOIL_MIN, "nodes": result})
 
 

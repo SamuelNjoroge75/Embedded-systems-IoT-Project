@@ -66,10 +66,10 @@
 </main>
 
 <script>
-const UNITS = { soil:"%", moist:"%", temp:"\u00B0C", hum:"%", rain:"mm", batt:"V" };
+const UNITS = { temp:"\u00B0C", soil:"%", moist:"%", hum:"%", rain:"mm", batt:"V" };
 const unitOf = k => { k = k.toLowerCase(); for (const p in UNITS) if (k.includes(p)) return UNITS[p]; return ""; };
 const label = k => k.replace(/_/g, " ").replace(/^./, c => c.toUpperCase());
-const isSoil = k => /soil|moist/i.test(k);
+const isSoil = k => /soil|moist/i.test(k) && !/temp/i.test(k);
 
 let state = { node:null, metric:null, soilMin:30, chart:null, latest:{} };
 const $ = id => document.getElementById(id);
